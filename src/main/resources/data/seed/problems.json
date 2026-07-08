@@ -1,0 +1,142 @@
+[
+  {
+    "subject": "APPLICATION",
+    "category": "SQL_INJECTION",
+    "questionText": "SQL Injection 공격의 원리와 대응 방안을 설명하시오. [6점]",
+    "totalScore": 6,
+    "answerType": "EXPLANATION",
+    "explanation": "SQL Injection은 사용자 입력값이 검증 없이 SQL 쿼리 문자열에 그대로 결합될 때 발생한다. 입력값 검증만으로는 우회될 수 있으므로, 쿼리 구조 자체를 입력값과 분리하는 PreparedStatement 사용이 가장 근본적인 대응책이다.",
+    "recommendedAnswer": "SQL Injection은 사용자 입력값에 악의적인 SQL 구문을 삽입하여 데이터베이스를 비정상적으로 조회·변조·삭제하는 공격이다. 대응 방안으로는 PreparedStatement 또는 바인딩 변수 사용, 화이트리스트 기반 입력값 검증, DB 계정 권한 최소화, 에러 메시지 노출 제한 등이 있다.",
+    "rubric": {
+      "gradingPolicy": "KEYWORD_BASED",
+      "description": "공격 원리 2점 + 대응 방안 3개 각 1~2점 구성",
+      "criteria": [
+        {
+          "content": "공격 원리: 검증되지 않은 입력값에 악의적인 SQL 구문을 삽입",
+          "score": 2,
+          "importance": "CORE",
+          "gradingType": "SEMANTIC",
+          "orderNo": 1,
+          "aliases": ["입력값에 SQL 구문 삽입", "악의적인 쿼리 삽입", "SQL 문 조작", "쿼리 문자열 조작"]
+        },
+        {
+          "content": "PreparedStatement 또는 바인딩 변수 사용",
+          "score": 2,
+          "importance": "CORE",
+          "gradingType": "KEYWORD",
+          "orderNo": 2,
+          "aliases": [
+            "PreparedStatement",
+            "prepared statement",
+            "바인딩 변수",
+            "파라미터 바인딩",
+            "Parameterized Query",
+            "쿼리 파라미터화"
+          ]
+        },
+        {
+          "content": "입력값 검증 또는 화이트리스트 검증",
+          "score": 1,
+          "importance": "NORMAL",
+          "gradingType": "KEYWORD",
+          "orderNo": 3,
+          "aliases": ["입력값 검증", "화이트리스트 검증", "입력값 필터링"]
+        },
+        {
+          "content": "DB 권한 최소화 또는 에러 메시지 노출 제한",
+          "score": 1,
+          "importance": "OPTIONAL",
+          "gradingType": "KEYWORD",
+          "orderNo": 4,
+          "aliases": ["DB 권한 최소화", "최소 권한 원칙", "에러 메시지 노출 제한", "에러 메시지 숨김"]
+        }
+      ]
+    }
+  },
+  {
+    "subject": "APPLICATION",
+    "category": "XSS",
+    "questionText": "XSS(Cross-Site Scripting) 공격의 원리와 대응 방안을 설명하시오. [6점]",
+    "totalScore": 6,
+    "answerType": "EXPLANATION",
+    "explanation": "XSS는 입력값 검증만으로는 막기 어렵다. 브라우저에 그대로 렌더링되는 출력 지점에서 이스케이프 처리(출력값 인코딩)를 누락하면 검증을 우회한 스크립트도 실행될 수 있다.",
+    "recommendedAnswer": "XSS는 공격자가 악성 스크립트를 웹페이지에 삽입하여 다른 사용자의 브라우저에서 실행되게 하는 공격이다. 대응 방안으로는 사용자 입력값과 출력값에 대한 HTML 이스케이프 처리(출력값 인코딩), 쿠키에 HttpOnly 속성 설정, CSP(Content Security Policy) 적용 등이 있다.",
+    "rubric": {
+      "gradingPolicy": "KEYWORD_BASED",
+      "description": "공격 원리 2점 + 대응 방안 3개 각 1~2점 구성",
+      "criteria": [
+        {
+          "content": "공격 원리: 악성 스크립트를 웹페이지에 삽입해 사용자 브라우저에서 실행",
+          "score": 2,
+          "importance": "CORE",
+          "gradingType": "SEMANTIC",
+          "orderNo": 1,
+          "aliases": ["악성 스크립트 삽입", "스크립트 실행", "클라이언트 스크립트 삽입", "자바스크립트 삽입"]
+        },
+        {
+          "content": "출력값 인코딩(이스케이프 처리)",
+          "score": 2,
+          "importance": "CORE",
+          "gradingType": "KEYWORD",
+          "orderNo": 2,
+          "aliases": ["출력값 인코딩", "HTML 이스케이프", "이스케이프 처리", "Output Encoding", "HTML Entity 인코딩"]
+        },
+        {
+          "content": "쿠키 HttpOnly 속성 설정",
+          "score": 1,
+          "importance": "NORMAL",
+          "gradingType": "KEYWORD",
+          "orderNo": 3,
+          "aliases": ["HttpOnly", "HttpOnly 쿠키", "쿠키 보안 속성"]
+        },
+        {
+          "content": "CSP(Content Security Policy) 적용",
+          "score": 1,
+          "importance": "OPTIONAL",
+          "gradingType": "KEYWORD",
+          "orderNo": 4,
+          "aliases": ["CSP", "Content Security Policy", "콘텐츠 보안 정책"]
+        }
+      ]
+    }
+  },
+  {
+    "subject": "APPLICATION",
+    "category": "CSRF",
+    "questionText": "CSRF(Cross-Site Request Forgery) 공격의 원리와 대응 방안을 설명하시오. [5점]",
+    "totalScore": 5,
+    "answerType": "EXPLANATION",
+    "explanation": "CSRF는 XSS와 달리 스크립트를 삽입하지 않고, 사용자가 이미 인증된 세션을 가지고 있다는 점을 악용해 의도하지 않은 요청을 강제로 전송시킨다는 점이 핵심이다.",
+    "recommendedAnswer": "CSRF는 사용자가 이미 인증된 세션을 가지고 있는 상태에서, 공격자가 의도하지 않은 요청을 강제로 전송시켜 사용자 권한으로 특정 동작을 수행시키는 공격이다. 대응 방안으로는 요청마다 CSRF 토큰을 발급해 검증하는 방법, Referer/Origin 헤더 검증, SameSite 쿠키 속성 설정 등이 있다.",
+    "rubric": {
+      "gradingPolicy": "KEYWORD_BASED",
+      "description": "공격 원리 2점 + 대응 방안 2개 각 1~2점 구성",
+      "criteria": [
+        {
+          "content": "공격 원리: 인증된 세션을 이용해 의도하지 않은 요청을 강제로 전송",
+          "score": 2,
+          "importance": "CORE",
+          "gradingType": "SEMANTIC",
+          "orderNo": 1,
+          "aliases": ["세션 도용 요청", "인증된 세션 악용", "의도하지 않은 요청 전송", "강제 요청 전송"]
+        },
+        {
+          "content": "CSRF 토큰 검증",
+          "score": 2,
+          "importance": "CORE",
+          "gradingType": "KEYWORD",
+          "orderNo": 2,
+          "aliases": ["CSRF 토큰", "Synchronizer Token", "토큰 검증", "CSRF Token"]
+        },
+        {
+          "content": "Referer/Origin 헤더 검증 또는 SameSite 쿠키 설정",
+          "score": 1,
+          "importance": "NORMAL",
+          "gradingType": "KEYWORD",
+          "orderNo": 3,
+          "aliases": ["Referer 검증", "Origin 검증", "SameSite", "SameSite 쿠키"]
+        }
+      ]
+    }
+  }
+]

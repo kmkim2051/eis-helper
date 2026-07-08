@@ -38,3 +38,18 @@
     - UserAnswer.userId는 로그인 시스템이 없어 익명 식별자용 nullable 문자열로 유지, User 테이블은 만들지 않음
     - ScoringResultDetail.confidence는 LLM(SEMANTIC) 판정 항목만 값을 가지고 Rule 기반(KEYWORD) 항목은 null
 - 남은 것: scoring 도메인 Repository/DTO/Service/Controller는 채점엔진(KeywordMatcher, ScoreCalculator 등) 구현 이후 진행 (roadmap Phase 1~2)
+
+## 2026-07-08 problem 시드 데이터 + totalScore 불변식 구현
+- 변경:
+    - src/main/resources/data/seed/problems.json 신규 (SQL Injection/XSS/CSRF 3문제, 문제당 기준 3~4개, 기준당 alias 3~6개, 전부 자체 작성 콘텐츠)
+    - skyline.eis.eishelper.problem.seed 패키지에 ProblemSeeder(CommandLineRunner) + ProblemSeed/RubricSeed/CriterionSeed record 추가
+    - skyline.eis.eishelper.problem.repository 패키지에 ProblemRepository, ScoringRubricRepository 신규 (problem 도메인 Repository 작업 일부 선구현)
+    - build.gradle에 spring-boot-starter-json 추가, application.properties에 h2 콘솔/show-sql 설정 추가
+- 결정:
+    - 시드 파일은 저장소 루트 data/seed/가 아니라 src/main/resources/data/seed/에 둠 — 클래스패스(JAR 내부)에서 읽어야 하므로 resources 하위가 아니면 런타임에 못 찾음
+    - Spring Boot 4.1.0은 Jackson 3(tools.jackson.* 패키지, groupId tools.jackson.core)로 이전됨 — ObjectMapper/TypeReference import가 기존 com.fasterxml.jackson.databind/core가 아니라 tools.jackson.databind/core임을 확인하고 반영
+    - totalScore 불변식(criteria score 합 == Problem.totalScore) 검증은 ProblemSeeder.validateTotalScore()에 구현 — 세 시드 문제 모두 정확히 일치하도록 작성(시스템 설계 문서의 SQLi 예시는 5개 기준 합이 7점으로 6점 총점을 초과하는 예시라 이 불변식과 맞지 않아 그대로 쓰지 않고 자체 기준으로 재구성)
+    - ScoringRubric은 mappedBy라 Problem.save()로 cascade되지 않음 — Problem을 먼저 save해 id를 받고, criteria/aliases를 채운 ScoringRubric을 ScoringRubricRepository로 별도 save해서 cascade=ALL로 하위까지 한 번에 저장
+    - 시딩은 DB가 비어있을 때만 실행(problemRepository.count()==0 가드)해 재기동 시 중복 삽입 방지
+- 검증: ./gradlew bootRun으로 실제 기동해 H2에 3문제 전체(Hibernate insert 로그)가 정상 삽입되는 것 확인, 에러 없이 기동 완료
+- 남은 것: problem 도메인 DTO/Service/Controller 구현 (문제 조회 API)
