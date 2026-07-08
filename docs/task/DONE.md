@@ -27,3 +27,14 @@
     - createdAt/updatedAt은 Hibernate @CreationTimestamp/@UpdateTimestamp 사용 (별도 auditing 설정 없이 동작)
     - 엔티티는 @Getter + protected 기본생성자 + private 전체생성자 + @Builder 패턴, setter 없음
 - 남은 것: problem 도메인 Repository/DTO/Service/Controller 구현 (문제 조회 API부터)
+
+## 2026-07-08 scoring 도메인 JPA 엔티티 구현
+- 변경: skyline.eis.eishelper.scoring.entity 패키지에 UserAnswer, ScoringResult, ScoringResultDetail 엔티티와 CriterionResultStatus enum 추가. docs/diagrams/domain-erd.md에 scoring 애그리거트 섹션 반영
+- 결정:
+    - UserAnswer(루트) 1:1 ScoringResult, ScoringResult 1:N ScoringResultDetail로 scoring 애그리거트 구성. cascade=ALL, orphanRemoval=true는 problem 애그리거트와 동일 패턴
+    - scoring → problem 참조(UserAnswer.problemId, ScoringResultDetail.criterionId)는 애그리거트 경계를 넘으므로 JPA 연관관계 대신 Long id 컬럼만 보관
+    - UserAnswer에는 score/totalScore를 두지 않고 ScoringResult에만 둠 (Problem/ScoringRubric의 totalScore 중복 제거와 같은 원칙)
+    - ScoringResult.totalScore는 Problem.totalScore와 지금은 같은 값이지만 채점 시점 스냅샷이라 중복 아님(추후 Problem 배점이 바뀌어도 과거 결과는 채점 당시 배점 유지)으로 남기기로 함
+    - UserAnswer.userId는 로그인 시스템이 없어 익명 식별자용 nullable 문자열로 유지, User 테이블은 만들지 않음
+    - ScoringResultDetail.confidence는 LLM(SEMANTIC) 판정 항목만 값을 가지고 Rule 기반(KEYWORD) 항목은 null
+- 남은 것: scoring 도메인 Repository/DTO/Service/Controller는 채점엔진(KeywordMatcher, ScoreCalculator 등) 구현 이후 진행 (roadmap Phase 1~2)

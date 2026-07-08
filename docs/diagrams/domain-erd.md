@@ -1,13 +1,21 @@
-# ERD — Phase 1 채점 도메인 (Problem / ScoringRubric / ScoringCriterion / CriterionAlias)
+# ERD — Phase 1 채점 도메인 (problem 애그리거트 / scoring 애그리거트)
 
 ## 개요
 
-Phase 1(단일 문제 채점 MVP)에 필요한 최소 테이블 구조를 나타낸다.
+Phase 1(단일 문제 채점 MVP)에 필요한 두 애그리거트를 나타낸다.
+
+1. **problem 애그리거트** (루트: Problem) — 문제, 채점 기준, 유사 표현
+2. **scoring 애그리거트** (루트: UserAnswer) — 사용자 답안, 채점 결과, 기준별 상세 결과
+
+두 애그리거트는 서로 다른 도메인 패키지(`skyline.eis.eishelper.problem`, `skyline.eis.eishelper.scoring`)에 속한다.
+같은 패키지의 구조 결정 근거는 [../product/mvp-scope-and-roadmap.md](../product/mvp-scope-and-roadmap.md) Phase 1 우선순위 참고.
+JPA 연관관계는 애그리거트 내부에서만 맺고, scoring → problem 참조는 `problemId`/`criterionId` 같은 id 값만 보관한다 (애그리거트 경계를 넘는 지연 로딩/양방향 결합을 피하기 위함).
+
+## 1. problem 애그리거트
+
 문제 1개는 채점 기준 묶음(Rubric) 1개를 가지고, 그 아래 채점 기준 항목(Criterion) 여러 개, 각 기준마다 유사 표현(Alias) 여러 개가 붙는 구조다.
 
-UserAnswer / ScoringResult 등 제출·이력 관련 테이블은 이번 ERD 범위에서 제외한다 (Phase 1 후반, Phase 4에서 추가 예정).
-
-## 다이어그램
+### 다이어그램
 
 ```mermaid
 erDiagram
@@ -54,7 +62,7 @@ erDiagram
 
 > `CRITERION_ALIAS`는 `(criterionId, alias)` 복합 unique 제약을 둔다 — 같은 기준 안에서 동일 alias 중복 등록 방지 (alias 문자열 자체는 다른 기준에서 재사용될 수 있으므로 전역 unique는 아님).
 
-## 설명
+### 설명
 
 | 테이블 | 설명 |
 |---|---|
@@ -111,7 +119,96 @@ erDiagram
 - 체감 난이도(difficulty)는 채점 로직 어디에도 쓰이지 않고 사람마다 기준이 달라 이번 ERD에서 제외.
 - subject는 지금 문자열/enum 컬럼으로만 두고, 별도 Subject 테이블(과목명 이력, 개정연도 등) 정규화는 과목 확장이 실제로 필요해지는 시점(roadmap Phase 6)으로 미룬다.
 
+## 2. scoring 애그리거트
+
+사용자가 답안을 제출(UserAnswer)하면 채점 결과(ScoringResult) 1개가 생기고, 그 아래 채점 기준별 상세 결과(ScoringResultDetail)가 여러 개 붙는 구조다.
+`problemId`(USER_ANSWER)와 `criterionId`(SCORING_RESULT_DETAIL)는 problem 애그리거트를 가리키지만, 별도 애그리거트라서 DB 레벨 FK나 JPA 연관관계 없이 id 값만 저장한다.
+
+### 다이어그램
+
+```mermaid
+erDiagram
+    USER_ANSWER ||--|| SCORING_RESULT : "채점 결과를 가진다"
+    SCORING_RESULT ||--o{ SCORING_RESULT_DETAIL : "기준별 상세를 가진다"
+
+    USER_ANSWER {
+        Long id PK
+        string userId
+        Long problemId
+        string answerText
+        datetime submittedAt
+    }
+
+    SCORING_RESULT {
+        Long id PK
+        Long userAnswerId FK
+        int score
+        int totalScore
+        string summary
+        datetime createdAt
+    }
+
+    SCORING_RESULT_DETAIL {
+        Long id PK
+        Long scoringResultId FK
+        Long criterionId
+        string status
+        int awardedScore
+        string reason
+        double confidence
+    }
+```
+
+> `USER_ANSWER.problemId`, `SCORING_RESULT_DETAIL.criterionId`는 problem 애그리거트의 id를 담는 일반 컬럼일 뿐 FK 제약이나 JPA 연관관계가 아니다 (애그리거트 경계 분리).
+
+### 설명
+
+| 테이블 | 설명 |
+|---|---|
+| USER_ANSWER | 사용자가 제출한 답안 원본. score/totalScore는 여기 두지 않고 SCORING_RESULT에만 둔다 (PROBLEM/SCORING_RUBRIC의 totalScore 중복 제거와 같은 이유) |
+| SCORING_RESULT | 답안 1건에 대한 채점 결과 (1:1). summary는 FeedbackGenerator가 만든 자연어 피드백 |
+| SCORING_RESULT_DETAIL | 채점 기준 하나하나에 대한 판정 결과. KeywordMatcher/LlmCriterionEvaluator의 판정 근거를 저장 |
+
+### 필드 상세
+
+#### USER_ANSWER
+
+| 필드 | 설명 | 예시 |
+|---|---|---|
+| userId | 로그인 시스템이 아직 없어 익명 식별자(세션 등) 용도로 nullable. 인증 도입 전까지는 비워둘 수 있음 | "sess-3f2a9c", null |
+| problemId | 대상 문제 id (problem 애그리거트 참조, FK 아님) | 1 |
+| answerText | 사용자가 제출한 주관식 답안 원문 | "PreparedStatement를 사용하고 입력값을 검증하며..." |
+| submittedAt | 제출 시각 | "2026-07-08T10:00:00" |
+
+#### SCORING_RESULT
+
+| 필드 | 설명 | 예시 |
+|---|---|---|
+| userAnswerId | 대상 답안 FK (1:1) | 1 |
+| score | 서버 ScoreCalculator가 계산한 예상 점수 | 5 |
+| totalScore | 채점 시점 기준 배점 총합. PROBLEM.totalScore와 지금은 같은 값이지만, 나중에 관리자가 문제 배점을 바꿔도 과거 채점 결과는 채점 당시 배점을 그대로 유지해야 하는 스냅샷이라 중복 저장이 아니다 | 6 |
+| summary | 채점 결과 한 줄/문단 요약 피드백 | "핵심 대응 방안은 잘 작성했습니다. DB 권한 최소화를 추가하면 더 안정적인 답안이 됩니다." |
+| createdAt | 채점 완료 시각 | "2026-07-08T10:00:02" |
+
+#### SCORING_RESULT_DETAIL
+
+| 필드 | 설명 | 예시 |
+|---|---|---|
+| scoringResultId | 대상 채점 결과 FK | 1 |
+| criterionId | 판정 대상 채점 기준 id (problem 애그리거트 참조, FK 아님) | 12 |
+| status | 이 기준에 대한 판정 상태 (`CriterionResultStatus`) | MATCHED(충족), PARTIAL(부분 충족), MISSING(누락), NEGATIVE(위험 표현 포함 — 감점), UNKNOWN(판정 불가) |
+| awardedScore | 이 기준에서 실제로 부여된 점수 | 2 |
+| reason | 왜 그렇게 판정했는지 근거 문장 | "PreparedStatement를 직접 언급하지 않았지만 파라미터 방식 처리를 설명함" |
+| confidence | LLM(SEMANTIC) 판정일 때만 값이 있는 신뢰도. Rule 기반(KEYWORD)으로만 판정된 항목은 null | 0.78, null |
+
+### 최소 요구사항 기준으로 생략한 것
+
+- UserAnswer에 score/totalScore를 두지 않고 ScoringResult에만 둔다 — 같은 값을 두 곳에 저장하지 않기 위함.
+- 재채점(재제출) 이력, 채점 버전 관리는 이번 ERD에서 제외. 필요해지면 SCORING_RESULT에 버전 컬럼 추가 고려.
+- User 테이블(회원) 자체는 만들지 않는다. userId는 문자열 컬럼으로만 두고, 실제 인증 시스템 도입 시 재검토.
+
 ## 참고
 
 - 필드 정의 근거: [../product/system-design.md](../product/system-design.md) 1절 핵심 도메인 모델
-- 범위 근거: [../product/mvp-scope-and-roadmap.md](../product/mvp-scope-and-roadmap.md) Phase 1
+- 범위 근거: [../product/mvp-scope-and-roadmap.md](../product/mvp-scope-and-roadmap.md) Phase 1, Phase 4
+- 구현: `skyline.eis.eishelper.problem.entity`, `skyline.eis.eishelper.scoring.entity`
