@@ -16,3 +16,14 @@
     - gradingPolicy(RubricGradingPolicy)와 gradingType(CriterionGradingType) enum 분리, CriterionGradingType에 MANUAL(자동 판정 불가, 관리자 수동 채점) 추가
     - CRITERION_ALIAS는 (criterionId, alias) 복합 unique 제약으로 같은 기준 내 중복 alias만 방지 (전역 unique 아님)
 - 남은 것: 이 ERD 기반 JPA 엔티티 구현 (Phase 1 1순위)
+
+## 2026-07-08 패키지 구조 결정 및 problem 도메인 JPA 엔티티 구현
+- 변경: skyline.eis.eishelper.problem.entity 패키지에 Problem, ScoringRubric, ScoringCriterion, CriterionAlias 엔티티와 관련 enum(Subject, AnswerType, RubricGradingPolicy, CriterionImportance, CriterionGradingType) 추가
+- 결정:
+    - 패키지 구조는 레이어 기준(controller/{도메인}) 대신 도메인 기준(도메인/{controller,service,repository,dto,entity})으로 결정 — 도메인이 늘어날 로드맵(Phase 4, 6)을 고려해 응집도 우선
+    - Problem/ScoringRubric/ScoringCriterion/CriterionAlias는 하나의 애그리거트(루트: Problem)로 보고 problem 패키지 하나에 묶음. 채점엔진(KeywordMatcher 등)은 CRUD 도메인이 아니므로 별도 scoring 패키지로 분리 예정
+    - 연관관계 소유자: ScoringRubric→Problem(FK problem_id), ScoringCriterion→ScoringRubric(FK rubric_id), CriterionAlias→ScoringCriterion(FK criterion_id). Problem.scoringRubric은 mappedBy 읽기 전용 참조
+    - cascade=ALL, orphanRemoval=true로 애그리거트 하위 엔티티는 루트 저장/삭제에 종속
+    - createdAt/updatedAt은 Hibernate @CreationTimestamp/@UpdateTimestamp 사용 (별도 auditing 설정 없이 동작)
+    - 엔티티는 @Getter + protected 기본생성자 + private 전체생성자 + @Builder 패턴, setter 없음
+- 남은 것: problem 도메인 Repository/DTO/Service/Controller 구현 (문제 조회 API부터)
