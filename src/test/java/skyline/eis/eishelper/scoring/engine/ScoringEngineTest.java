@@ -29,6 +29,7 @@ class ScoringEngineTest {
     ScoringOutcome outcome =
         scoringEngine.score(1L, "입력값에 SQL 구문을 삽입하는 공격이다. PreparedStatement를 사용하고 입력값을 검증한다.");
 
+    assertThat(outcome.problem().getId()).isEqualTo(1L);
     ScoringResult result = outcome.scoringResult();
     assertThat(result.getId()).isNotNull();
     assertThat(result.getScore()).isEqualTo(5);

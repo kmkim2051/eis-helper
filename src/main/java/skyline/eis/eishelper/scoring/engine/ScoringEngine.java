@@ -50,7 +50,7 @@ public class ScoringEngine {
         scoreCalculator.calculate(criteria, statusByCriterionId, rubric.getProblem().getTotalScore());
 
     ScoringResult scoringResult = saveResult(problemId, answerText, matchResult, calculated);
-    return new ScoringOutcome(scoringResult, matchResult);
+    return new ScoringOutcome(rubric.getProblem(), scoringResult, matchResult);
   }
 
   private ScoringResult saveResult(

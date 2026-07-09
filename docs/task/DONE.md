@@ -160,3 +160,13 @@
     - AnswerService는 요청/응답 변환만 담당, 트랜잭션은 ScoringEngine.score()가 소유
 - 검증: ./gradlew test 전체 통과(41개, 신규 5개 포함) + bootRun(18080) 실기동 후 curl로 정상 채점(5/6점, 키워드 목록)/400/404 응답 확인
 - 남은 것: 추천 답안 반환 (제출 응답에 Problem.recommendedAnswer 포함) — Phase 1 마지막 항목
+
+## 2026-07-09 추천 답안 반환 (Phase 1 마지막 항목)
+- 변경:
+    - AnswerSubmitResponse에 recommendedAnswer 필드 추가, ScoringOutcome에 Problem 포함(엔진이 rubric으로 이미 로드한 Problem 재사용 — 추가 쿼리 없음)
+    - AnswerControllerTest에 recommendedAnswer 검증 추가, ScoringEngineTest에 outcome.problem() 검증 추가
+- 결정:
+    - recommendedAnswer는 문제 조회 API가 아닌 제출 응답에서만 제공 (풀이 전 정답 유출 방지 원칙 유지)
+    - AnswerService에서 ProblemRepository를 다시 조회하지 않고 ScoringOutcome에 Problem을 실어 전달 — 채점 트랜잭션 안에서 이미 로드된 엔티티 재사용
+- 검증: ./gradlew test 전체 통과(41개) + bootRun(18080) 실기동 curl — XSS 문제(2번)에 조사 붙은 답안("출력값을 인코딩하고")을 제출해 토큰 매칭 인정 + recommendedAnswer 포함 응답 확인
+- 남은 것: Phase 1 완료. 다음은 roadmap Phase 2 (LLM Client, LlmCriterionEvaluator, confidence/fallback 처리) — TODO 목록 재구성 필요

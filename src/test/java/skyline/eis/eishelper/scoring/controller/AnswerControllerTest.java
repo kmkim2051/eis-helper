@@ -1,5 +1,6 @@
 package skyline.eis.eishelper.scoring.controller;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -45,7 +46,8 @@ class AnswerControllerTest {
         .andExpect(jsonPath("$.matchedKeywords", hasItem("입력값 검증")))
         .andExpect(jsonPath("$.partialKeywords").isEmpty())
         .andExpect(jsonPath("$.missingKeywords.length()").value(1))
-        .andExpect(jsonPath("$.missingKeywords", hasItem("DB 권한 최소화 또는 에러 메시지 노출 제한")));
+        .andExpect(jsonPath("$.missingKeywords", hasItem("DB 권한 최소화 또는 에러 메시지 노출 제한")))
+        .andExpect(jsonPath("$.recommendedAnswer", containsString("PreparedStatement")));
   }
 
   @Test

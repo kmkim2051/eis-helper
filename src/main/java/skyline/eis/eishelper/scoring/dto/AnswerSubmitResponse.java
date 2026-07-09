@@ -11,13 +11,15 @@ import skyline.eis.eishelper.scoring.entity.CriterionResultStatus;
 // score는 실제 시험 점수가 아닌 "채점 기준 기반 예상 점수"다 (engineering-guidelines 표현 원칙).
 // matchedKeywords는 답안에서 실제 인정된 키워드(alias), partial/missingKeywords는 기준 내용(content) —
 // 누락 안내는 어떤 기준을 못 채웠는지가 중요하므로 개별 키워드가 아닌 기준 단위로 알려준다.
+// recommendedAnswer는 정답 유출 방지를 위해 문제 조회가 아닌 제출 응답에서만 제공한다.
 public record AnswerSubmitResponse(
     Long problemId,
     int score,
     int totalScore,
     List<String> matchedKeywords,
     List<String> partialKeywords,
-    List<String> missingKeywords) {
+    List<String> missingKeywords,
+    String recommendedAnswer) {
 
   public static AnswerSubmitResponse from(ScoringOutcome outcome) {
     List<KeywordMatch> matches = outcome.matchResult().matches();
@@ -39,7 +41,8 @@ public record AnswerSubmitResponse(
                     match.status() == CriterionResultStatus.MISSING
                         || match.status() == CriterionResultStatus.UNKNOWN)
             .map(KeywordMatch::content)
-            .toList());
+            .toList(),
+        outcome.problem().getRecommendedAnswer());
   }
 
   // "PreparedStatement"와 "prepared statement"처럼 표기만 다른 alias가 동시에 매칭될 수 있어,
