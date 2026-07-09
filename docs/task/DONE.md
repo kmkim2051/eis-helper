@@ -53,3 +53,17 @@
     - 시딩은 DB가 비어있을 때만 실행(problemRepository.count()==0 가드)해 재기동 시 중복 삽입 방지
 - 검증: ./gradlew bootRun으로 실제 기동해 H2에 3문제 전체(Hibernate insert 로그)가 정상 삽입되는 것 확인, 에러 없이 기동 완료
 - 남은 것: problem 도메인 DTO/Service/Controller 구현 (문제 조회 API)
+
+## 2026-07-09 problem 도메인 문제 조회 API 구현
+- 변경:
+    - problem/dto/ProblemResponse(record), problem/service/ProblemService, problem/controller/ProblemController 신규 — GET /api/problems, GET /api/problems/{problemId}
+    - common/exception 패키지 신규 — NotFoundException + GlobalExceptionHandler(@RestControllerAdvice, RFC 7807 ProblemDetail로 404 응답)
+    - test에 ProblemControllerTest 신규 (@SpringBootTest + MockMvc 3케이스: 목록/상세/404)
+- 결정:
+    - 목록/상세 DTO는 현재 노출 가능 필드가 동일해 ProblemResponse 하나로 통일 (달라지는 시점에 분리)
+    - 채점 기준(rubric/criteria), explanation, recommendedAnswer는 풀이 전 정답 유출이므로 조회 응답에서 제외 — 추천 답안/해설은 답안 제출 응답에서만 제공
+    - subject/category 필터 쿼리 파라미터는 MVP에서 생략 (문제 3개뿐, 필요 시 추가)
+    - 예외 응답 포맷은 Spring의 ProblemDetail(RFC 7807) 사용, 도메인 공통 NotFoundException은 common/exception에 배치
+    - Spring Boot 4에서 @AutoConfigureMockMvc 패키지가 org.springframework.boot.test.autoconfigure.web.servlet → org.springframework.boot.webmvc.test.autoconfigure로 이동함 (Jackson 3 이동과 같은 계열의 Boot 4 모듈 재편)
+- 검증: ./gradlew test 전체 통과(4개) + bootRun 실기동 후 curl로 목록/상세/404 응답 확인. 로컬 8080의 127.0.0.1은 다른 서비스(PID 4402)가 선점 중이라 [::1]:8080으로 확인함 — 추후 로컬 개발 시 server.port 변경 고려
+- 남은 것: AnswerPreprocessor 구현 (채점엔진 파이프라인 첫 단계)
