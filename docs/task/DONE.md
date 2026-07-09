@@ -143,3 +143,20 @@
     - 없는 problemId는 rubric 조회 실패로 NotFoundException — problem/rubric을 각각 조회하지 않고 rubric 하나로 판정(1:1 필수 관계이므로)
 - 검증: ./gradlew test 전체 통과(36개, 신규 5개 포함 — 채점/저장/reason 기록/0점+UNKNOWN·MISSING 구분/404)
 - 남은 것: 답안 제출 API 구현 (POST /api/answers/submit — matched/partial/missing 키워드 + 예상 점수 + 추천 답안 응답, UNKNOWN→missing 합류 방침 적용)
+
+## 2026-07-09 답안 제출 API 구현 (POST /api/answers/submit)
+- 변경:
+    - scoring/controller/AnswerController, scoring/service/AnswerService, scoring/dto/AnswerSubmitRequest·AnswerSubmitResponse 신규
+    - build.gradle에 spring-boot-starter-validation 추가, 요청 검증은 Bean Validation(@NotNull problemId, @NotBlank answerText)
+    - GlobalExceptionHandler에 MethodArgumentNotValidException 핸들러 추가 — 필드 오류를 모아 RFC 7807 ProblemDetail 400으로 응답
+    - test에 AnswerControllerTest 신규 (@SpringBootTest + MockMvc + @Transactional 롤백, 5케이스: 정상 채점 응답/0점+UNKNOWN 합류/빈 답안 400/problemId 누락 400/없는 문제 404)
+- 결정:
+    - 응답 필드: problemId, score, totalScore, matchedKeywords, partialKeywords, missingKeywords (system-design 초안 준수). feedback/recommendedAnswer는 각각 Phase 3 / 다음 TODO 몫
+    - matchedKeywords는 실제 인정된 alias 표기, partial/missingKeywords는 기준 content — 누락 안내는 개별 키워드보다 "어떤 기준을 못 채웠는지"가 유용하므로 기준 단위
+    - UNKNOWN→missing 합류 방침 적용 지점이 여기(AnswerSubmitResponse.from). DB 저장은 UNKNOWN 구분 유지
+    - partialKeywords는 Phase 1에서 항상 빈 배열이지만 응답 스키마 안정성을 위해 필드 유지 (Phase 2 LLM 도입 시 채워짐)
+    - matchedKeywords는 정규화(공백 제거) 기준 중복 제거 — 공백 제거 매칭 도입으로 "PreparedStatement"/"prepared statement" 두 alias가 동시 매칭되어 표시가 중복되던 것을 첫 표기만 노출 (실기동 curl로 발견)
+    - 상태코드는 200 — UserAnswer 생성이 일어나지만 API 의미가 "채점 수행과 결과 반환"이고 system-design 초안도 결과 응답 형태 (조회는 추후 /api/answers/history)
+    - AnswerService는 요청/응답 변환만 담당, 트랜잭션은 ScoringEngine.score()가 소유
+- 검증: ./gradlew test 전체 통과(41개, 신규 5개 포함) + bootRun(18080) 실기동 후 curl로 정상 채점(5/6점, 키워드 목록)/400/404 응답 확인
+- 남은 것: 추천 답안 반환 (제출 응답에 Problem.recommendedAnswer 포함) — Phase 1 마지막 항목
