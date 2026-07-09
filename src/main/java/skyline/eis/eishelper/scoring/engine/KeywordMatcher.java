@@ -9,7 +9,9 @@ import skyline.eis.eishelper.problem.entity.ScoringCriterion;
 import skyline.eis.eishelper.scoring.entity.CriterionResultStatus;
 
 // 답안을 채점 기준의 키워드/alias와 대조하는 규칙 기반 매칭기.
-// 답안과 키워드를 동일한 규칙(AnswerPreprocessor)으로 정규화한 뒤 부분 문자열 포함 여부로 판정한다.
+// 답안과 키워드를 동일한 규칙(AnswerPreprocessor)으로 정규화한 뒤 두 전략 중 하나로 판정한다:
+// 1) 공백 제거 포함 — 띄어쓰기 변형("입력값검증", "prepared statement"↔"preparedstatement") 허용
+// 2) 토큰 접두어 — 조사/어미가 붙은 표현("입력값을 검증한다" ⊇ "입력값 검증") 허용
 @Component
 public class KeywordMatcher {
 
@@ -30,7 +32,7 @@ public class KeywordMatcher {
       if (normalizedKeyword.isEmpty()) {
         continue;
       }
-      if (normalizedAnswer.contains(normalizedKeyword)) {
+      if (matches(normalizedAnswer, normalizedKeyword)) {
         matchedKeywords.add(keyword);
       }
     }
@@ -41,6 +43,34 @@ public class KeywordMatcher {
         criterion.getImportance(),
         status,
         List.copyOf(matchedKeywords));
+  }
+
+  private boolean matches(String normalizedAnswer, String normalizedKeyword) {
+    if (normalizedAnswer.replace(" ", "").contains(normalizedKeyword.replace(" ", ""))) {
+      return true;
+    }
+    return matchesTokenPrefix(normalizedAnswer.split(" "), normalizedKeyword.split(" "));
+  }
+
+  // 키워드 토큰열이 답안의 "연속된" 토큰열과 순서대로 접두어 일치하는지 본다.
+  // 접두어 비교라 조사/어미("입력값을", "검증한다")를 허용하되, 연속 조건으로
+  // 중간에 다른 단어가 끼는 경우("토큰 없이 검증")는 인정하지 않는다 — 부정/변형 오탐 방지.
+  private boolean matchesTokenPrefix(String[] answerTokens, String[] keywordTokens) {
+    for (int start = 0; start <= answerTokens.length - keywordTokens.length; start++) {
+      if (allTokensMatchFrom(answerTokens, keywordTokens, start)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean allTokensMatchFrom(String[] answerTokens, String[] keywordTokens, int start) {
+    for (int i = 0; i < keywordTokens.length; i++) {
+      if (!answerTokens[start + i].startsWith(keywordTokens[i])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // alias를 키워드 후보로 사용하고, alias가 없는 기준은 content 자체를 키워드로 쓴다.

@@ -95,3 +95,32 @@
     - KeywordMatcher는 @Component(파이프라인 스테이지), AnswerPreprocessor는 static util(순수 텍스트 함수)로 성격 구분 — 의존성 없어 단위테스트는 new로 직접 생성
 - 검증: ./gradlew test 전체 통과(19개, 신규 8개 포함)
 - 남은 것: ScoreCalculator 구현 (MATCHED/PARTIAL/MISSING별 배점 계산, 총점 초과 방지)
+
+## 2026-07-09 ScoreCalculator 구현 (채점엔진 파이프라인 3단계)
+- 변경:
+    - scoring/engine/ScoreCalculator(@Component) 신규 — 기준별 status와 배점으로 최종 점수 계산
+    - scoring/engine/CriterionScore(record), CalculatedScore(record) 신규 — 기준별 획득 점수 + 제한된 합계
+    - test에 ScoreCalculatorTest 신규 (순수 JUnit5 + AssertJ, 7케이스)
+- 결정:
+    - 입력을 KeywordMatchResult가 아니라 criterionId->status 맵으로 받음 — 상태 판정(규칙/LLM)과 점수 계산을 분리해, LLM이 UNKNOWN을 MATCHED/PARTIAL로 갱신한 뒤 병합된 최종 상태 맵을 그대로 넘길 수 있게 함. calculator는 matcher/LLM 결과 형태에 의존하지 않음
+    - 배점 정책: MATCHED=100%, PARTIAL=50%(버림/floor), MISSING/UNKNOWN=0, NEGATIVE=-배점. switch를 enum 5값에 대해 exhaustive하게 작성해 상태 추가 시 컴파일 강제
+    - UNKNOWN은 0점 — 규칙만으로 충족을 확인할 수 없으므로 LLM 도입 전에는 무득점(보수적). LLM 단계에서 MATCHED/PARTIAL로 승격되면 그때 점수가 붙음
+    - PARTIAL은 정수 나눗셈(score*50/100)으로 버림 처리 — 1점 기준 PARTIAL은 0점. 부분점수 반올림 인플레 방지
+    - "총점 초과 방지"는 합계를 [0, totalScore]로 clamp하는 안전장치로 구현. 기준 배점 합이 총점과 어긋나는 데이터 오류 상황 대비이며, 정상 데이터에선 clamp 없이도 범위 내. 기준별 awardedScore는 raw로 보존(상세는 정직하게, 합계만 방어)
+    - totalScore는 호출부(엔진)가 Problem/ScoringResult 스냅샷 값으로 넘기도록 파라미터화 — calculator가 Problem 엔티티에 직접 의존하지 않음
+    - reason/confidence는 판정 단계 산출물이라 CriterionScore에 넣지 않음 — 엔진이 저장 시 KeywordMatch/LLM 결과와 병합
+- 검증: ./gradlew test 전체 통과(26개, 신규 7개 포함)
+- 남은 것: ScoringEngine 오케스트레이션 + 결과 저장 (Preprocessor→Matcher→Calculator 연결, UserAnswer/ScoringResult/ScoringResultDetail 저장)
+
+## 2026-07-09 KeywordMatcher 토큰 기반 매칭 개선 (조사 매칭 갭 해결)
+- 배경: 중간 검토에서 발견 — 기존 substring 매칭은 alias의 중간 단어에 조사가 붙으면 실패("입력값을 검증한다" vs "입력값 검증" → MISSING). 시드 alias 44개 중 40개가 다단어라 실사용 답안의 기본 경로에서 recall이 크게 떨어지고, KEYWORD 기준의 MISSING은 확정이라 Phase 2 LLM으로도 복구 불가한 구조였음
+- 변경:
+    - KeywordMatcher의 contains 판정을 두 전략의 OR로 교체: (1) 공백 제거 포함 매칭 — 붙여 쓴 답안("입력값검증")과 띄어쓰기 변형("prepared statement"↔"preparedstatement") 허용, (2) 토큰 접두어 매칭 — alias 토큰열이 답안의 연속 토큰열과 순서대로 접두어 일치하면 인정(조사/어미 허용)
+    - KeywordMatcherTest에 5케이스 추가 (조사 매칭, 붙여쓰기 매칭, 한 표기 alias로 공백 변형 커버, 토큰 순서 불일치 거부, 토큰 사이 단어 삽입 거부)
+- 결정:
+    - 공백 제거 매칭은 기존 substring 매칭의 상위집합이라 회귀 없음 (공백 포함 매칭되던 것은 공백 제거 후에도 반드시 매칭됨)
+    - 토큰 접두어는 "연속" 토큰만 인정, 사이에 다른 단어가 끼면("토큰 없이 검증") 불인정 — gap 허용 시 부정 표현 오탐 위험이 커서 보수적으로 결정. "노출하지 않도록 제한" 같은 삽입형 표현은 alias 추가나 Phase 2 LLM의 몫으로 남김
+    - 형태소 분석기(예: 코모란/노리) 도입은 보류 — 접두어+공백제거 조합으로 조사/띄어쓰기 갭은 해소되고, 의존성 추가 대비 이득이 아직 없음
+    - 이전 KeywordMatcher 결정 중 "PreparedStatement/prepared statement 두 표기를 alias로 모두 등록해 커버" 항목은 이번 변경으로 대체됨 — 공백 제거 매칭이 한 표기로 양쪽을 커버(기존 시드 alias는 그대로 둠, 중복이어도 무해)
+- 검증: ./gradlew test 전체 통과(31개, 신규 5개 포함)
+- 남은 것: ScoringEngine 오케스트레이션 + 결과 저장. 중간 검토 발견 2번(UNKNOWN의 제출 응답 표현 방식)은 엔진 단계에서 결정 필요

@@ -82,6 +82,82 @@ class KeywordMatcherTest {
   }
 
   @Test
+  void 토큰에_조사나_어미가_붙어도_접두어_매칭으로_인정된다() {
+    ScoringCriterion criterion =
+        criterion(
+            1L,
+            "입력값 검증 또는 화이트리스트 검증",
+            CriterionImportance.NORMAL,
+            CriterionGradingType.KEYWORD,
+            List.of("입력값 검증"));
+
+    KeywordMatchResult result = keywordMatcher.match("입력값을 검증한다", List.of(criterion));
+
+    assertThat(result.matches().get(0).status()).isEqualTo(CriterionResultStatus.MATCHED);
+  }
+
+  @Test
+  void 답안이_alias를_붙여_써도_공백_제거_매칭으로_인정된다() {
+    ScoringCriterion criterion =
+        criterion(
+            1L,
+            "입력값 검증",
+            CriterionImportance.NORMAL,
+            CriterionGradingType.KEYWORD,
+            List.of("입력값 검증"));
+
+    KeywordMatchResult result = keywordMatcher.match("입력값검증이 필요하다", List.of(criterion));
+
+    assertThat(result.matches().get(0).status()).isEqualTo(CriterionResultStatus.MATCHED);
+  }
+
+  @Test
+  void 붙여_쓴_alias_하나로_띄어_쓴_답안도_커버한다() {
+    ScoringCriterion criterion =
+        criterion(
+            1L,
+            "PreparedStatement 사용",
+            CriterionImportance.CORE,
+            CriterionGradingType.KEYWORD,
+            List.of("PreparedStatement"));
+
+    KeywordMatchResult result =
+        keywordMatcher.match("Prepared Statement를 사용해 방어한다", List.of(criterion));
+
+    assertThat(result.matches().get(0).status()).isEqualTo(CriterionResultStatus.MATCHED);
+  }
+
+  @Test
+  void 키워드_토큰_순서가_다르면_매칭되지_않는다() {
+    ScoringCriterion criterion =
+        criterion(
+            1L,
+            "입력값 검증",
+            CriterionImportance.NORMAL,
+            CriterionGradingType.KEYWORD,
+            List.of("입력값 검증"));
+
+    KeywordMatchResult result = keywordMatcher.match("검증 입력값", List.of(criterion));
+
+    assertThat(result.matches().get(0).status()).isEqualTo(CriterionResultStatus.MISSING);
+  }
+
+  @Test
+  void 키워드_토큰_사이에_다른_단어가_끼면_매칭되지_않는다() {
+    ScoringCriterion criterion =
+        criterion(
+            1L,
+            "CSRF 토큰 검증",
+            CriterionImportance.CORE,
+            CriterionGradingType.KEYWORD,
+            List.of("토큰 검증"));
+
+    KeywordMatchResult result = keywordMatcher.match("토큰 없이 검증한다", List.of(criterion));
+
+    assertThat(result.matches().get(0).status()).isEqualTo(CriterionResultStatus.MISSING);
+  }
+
+  @Test
   void alias가_없는_기준은_content로_매칭한다() {
     ScoringCriterion criterion =
         criterion(1L, "WAF 적용", CriterionImportance.OPTIONAL, CriterionGradingType.KEYWORD, List.of());
