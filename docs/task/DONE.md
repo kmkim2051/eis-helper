@@ -67,3 +67,16 @@
     - Spring Boot 4에서 @AutoConfigureMockMvc 패키지가 org.springframework.boot.test.autoconfigure.web.servlet → org.springframework.boot.webmvc.test.autoconfigure로 이동함 (Jackson 3 이동과 같은 계열의 Boot 4 모듈 재편)
 - 검증: ./gradlew test 전체 통과(4개) + bootRun 실기동 후 curl로 목록/상세/404 응답 확인. 로컬 8080의 127.0.0.1은 다른 서비스(PID 4402)가 선점 중이라 [::1]:8080으로 확인함 — 추후 로컬 개발 시 server.port 변경 고려
 - 남은 것: AnswerPreprocessor 구현 (채점엔진 파이프라인 첫 단계)
+
+## 2026-07-09 AnswerPreprocessor 구현 (채점엔진 파이프라인 1단계)
+- 변경:
+    - scoring/engine/AnswerPreprocessor 신규 — 순수 함수 정적 메서드 preprocess(String), Spring 빈이 아닌 유틸리티 클래스(private 생성자)
+    - test에 AnswerPreprocessorTest 신규 (순수 JUnit5 + AssertJ, 7케이스: 공백 정리, 대소문자 정규화, 특수문자 치환, 한글/영문/숫자 보존, null/blank 처리)
+- 결정:
+    - 이번 단계 범위는 TODO 기준대로 공백/대소문자/특수문자 정규화로 한정. 한글/영문 혼용 용어 정리·조사 제거·용어 표준화는 CriterionAlias 데이터로 이미 흡수되는 영역이라 다음 단계인 KeywordMatcher(alias 매칭)에서 처리하기로 함 — 여기서 규칙 기반 표준화를 시도하면 alias 데이터와 로직이 이중화될 위험
+    - 특수문자는 빈 문자열이 아닌 공백으로 치환 (예: "SQL(공격)" → "sql 공격") — 구두점 제거 시 단어가 붙어버리는 것(예: "SQL공격") 방지
+    - 허용 문자는 [0-9a-zA-Z가-힣\s] 화이트리스트 방식으로 결정 (제거할 특수문자를 나열하는 블랙리스트 방식보다 견고)
+    - null 입력은 예외를 던지지 않고 빈 문자열 반환 — 이후 KeywordMatcher/ScoringEngine이 항상 non-null 문자열을 받도록 계약 단순화
+    - MockMvc/@SpringBootTest 대신 순수 JUnit 단위테스트 사용 — Spring 컨텍스트 로딩 없이 빠르게 검증 가능한 순수 함수이므로
+- 검증: ./gradlew test 전체 통과(11개, 신규 7개 포함)
+- 남은 것: KeywordMatcher 구현 (직접 키워드 + alias 매칭)
