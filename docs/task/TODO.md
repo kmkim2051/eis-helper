@@ -6,7 +6,6 @@
 
 Phase 1 우선순위 순 (위에서부터 착수):
 
-- [ ] KeywordMatcher 구현 — 직접 키워드 + alias 매칭, CORE 기준 누락 판정 (Phase 1 핵심. NEGATIVE 판정은 데이터 소스가 없어 이번 Phase 미사용 전제)
 - [ ] ScoreCalculator 구현 — MATCHED/PARTIAL/MISSING별 배점 계산, 총점 초과 방지
 - [ ] ScoringEngine 오케스트레이션 + 결과 저장 — Preprocessor→Matcher→Calculator 연결, UserAnswer/ScoringResult/ScoringResultDetail 저장
 - [ ] 답안 제출 API 구현 — POST /api/answers/submit, 채점 결과 응답 (matched/partial/missing 키워드 + 예상 점수)

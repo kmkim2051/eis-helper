@@ -80,3 +80,18 @@
     - MockMvc/@SpringBootTest 대신 순수 JUnit 단위테스트 사용 — Spring 컨텍스트 로딩 없이 빠르게 검증 가능한 순수 함수이므로
 - 검증: ./gradlew test 전체 통과(11개, 신규 7개 포함)
 - 남은 것: KeywordMatcher 구현 (직접 키워드 + alias 매칭)
+
+## 2026-07-09 KeywordMatcher 구현 (채점엔진 파이프라인 2단계)
+- 변경:
+    - scoring/engine/KeywordMatcher(@Component) 신규 — 답안과 키워드를 AnswerPreprocessor로 동일 정규화 후 부분 문자열 포함 여부로 기준별 매칭
+    - scoring/engine/KeywordMatch(record), KeywordMatchResult(record) 신규 — 기준별 매칭 결과 + CORE 누락 집계(missingCoreCriteria/hasMissingCoreCriteria)
+    - test에 KeywordMatcherTest 신규 (순수 JUnit5 + AssertJ, 8케이스)
+- 결정:
+    - 키워드 후보는 CriterionAlias 목록을 사용하고, alias가 없는 기준은 content를 키워드로 폴백 — 데이터 모델상 '직접 키워드'용 별도 필드가 없고 alias가 그 역할을 겸함
+    - 매칭 판정을 gradingType으로 분기: KEYWORD 기준은 미출현 시 규칙만으로 MISSING 확정, SEMANTIC/MANUAL 기준은 의미상 충족 가능성이 남아 UNKNOWN으로 두어 이후 LLM 판정 단계로 넘김. 즉 KeywordMatcher는 MATCHED/MISSING/UNKNOWN만 생성, PARTIAL/NEGATIVE는 만들지 않음(TODO 전제: NEGATIVE 데이터 소스 없음)
+    - "CORE 기준 누락"은 MISSING으로 확정된 CORE만 집계 — SEMANTIC CORE는 미매칭이어도 UNKNOWN이라 누락으로 단정하지 않음(LLM이 인정할 여지)
+    - 전처리 후 빈 문자열이 되는 키워드(예: "!!!")는 건너뜀 — "".contains("")가 항상 true라 발생하는 오탐 방지
+    - 정규화는 공백을 보존하므로 "PreparedStatement"와 "prepared statement"는 서로 다른 문자열로 남음. 이는 버그가 아니라 alias 데이터로 두 표기를 모두 등록해 커버하는 설계(시드 데이터가 실제로 두 표기를 모두 포함)
+    - KeywordMatcher는 @Component(파이프라인 스테이지), AnswerPreprocessor는 static util(순수 텍스트 함수)로 성격 구분 — 의존성 없어 단위테스트는 new로 직접 생성
+- 검증: ./gradlew test 전체 통과(19개, 신규 8개 포함)
+- 남은 것: ScoreCalculator 구현 (MATCHED/PARTIAL/MISSING별 배점 계산, 총점 초과 방지)
