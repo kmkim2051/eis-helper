@@ -124,3 +124,22 @@
     - 이전 KeywordMatcher 결정 중 "PreparedStatement/prepared statement 두 표기를 alias로 모두 등록해 커버" 항목은 이번 변경으로 대체됨 — 공백 제거 매칭이 한 표기로 양쪽을 커버(기존 시드 alias는 그대로 둠, 중복이어도 무해)
 - 검증: ./gradlew test 전체 통과(31개, 신규 5개 포함)
 - 남은 것: ScoringEngine 오케스트레이션 + 결과 저장. 중간 검토 발견 2번(UNKNOWN의 제출 응답 표현 방식)은 엔진 단계에서 결정 필요
+
+## 2026-07-09 ScoringEngine 오케스트레이션 + 결과 저장 (채점엔진 파이프라인 4단계)
+- 변경:
+    - scoring/engine/ScoringEngine(@Component, @Transactional) 신규 — 루브릭 조회 → KeywordMatcher → ScoreCalculator → UserAnswer/ScoringResult/ScoringResultDetail 저장
+    - scoring/engine/ScoringOutcome(record) 신규 — 저장된 ScoringResult + KeywordMatchResult 묶음 반환
+    - scoring/repository 패키지 신규 — UserAnswerRepository, ScoringResultRepository
+    - ScoringRubricRepository에 findByProblemId 파생 쿼리 추가
+    - test에 ScoringEngineTest 신규 (@SpringBootTest + @Transactional 롤백, 시드 문제 1 기반 5케이스)
+- 결정:
+    - UNKNOWN 표현(중간 검토 발견 2번): DB에는 UNKNOWN 그대로 저장해 Phase 2 LLM 재판정 대상을 식별 가능하게 유지. 사용자 제출 응답에서는 missing 목록에 합쳐 노출하기로 방침 결정(적용은 다음 단계 제출 API에서)
+    - 엔진 반환은 엔티티가 아닌 ScoringOutcome — 제출 API가 matched/missing 키워드 목록을 매칭 재실행 없이 구성할 수 있도록 KeywordMatchResult를 함께 전달
+    - criteria는 orderNo로 정렬 후 매칭/계산 — @OneToMany 컬렉션 순서가 보장되지 않으므로 상세 저장 순서를 결정적으로 만듦
+    - 저장 idiom은 ProblemSeeder와 동일: UserAnswer 먼저 save → ScoringResult(details를 builder 백레퍼런스로 채움) save로 cascade
+    - reason은 규칙 판정 근거를 한국어로 기록(MATCHED: "키워드 매칭: ...", MISSING: "매칭된 키워드 없음", UNKNOWN: "규칙 기반 판정 불가 — 의미 판정 대상"), confidence는 규칙 기반이라 전부 null
+    - reasonFor의 switch는 exhaustive — 규칙 단계에서 PARTIAL/NEGATIVE가 나타나면 IllegalStateException (엔진 불변식 명시)
+    - UserAnswer.userId는 null로 저장 (익명, 인증/세션 식별자 도입 시 확장). summary도 null (Phase 3 FeedbackGenerator 몫)
+    - 없는 problemId는 rubric 조회 실패로 NotFoundException — problem/rubric을 각각 조회하지 않고 rubric 하나로 판정(1:1 필수 관계이므로)
+- 검증: ./gradlew test 전체 통과(36개, 신규 5개 포함 — 채점/저장/reason 기록/0점+UNKNOWN·MISSING 구분/404)
+- 남은 것: 답안 제출 API 구현 (POST /api/answers/submit — matched/partial/missing 키워드 + 예상 점수 + 추천 답안 응답, UNKNOWN→missing 합류 방침 적용)
