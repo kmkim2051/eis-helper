@@ -11,6 +11,10 @@ on:
   push:
     branches: [dev, main]
 
+# 최소 권한 원칙 (ci-guideline.md §2-5)
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -31,7 +35,7 @@ jobs:
       - name: 테스트 (H2)
         run: ./gradlew test
 
-  # dev → main PR과 main push에서만 — MariaDB 프로파일로 이식성 검증
+  # dev → main PR과 main push에서만 — MariaDB(ci 프로파일)로 이식성 검증
   # (H2만으로는 못 잡는 버그가 실제로 있었음: 컬렉션 순서 @OrderBy 건)
   test-mariadb:
     if: >-
@@ -41,7 +45,8 @@ jobs:
     timeout-minutes: 10
     services:
       mariadb:
-        image: mariadb:11
+        # docker-compose.yml과 동일 마이너 버전 고정 (ci-guideline.md)
+        image: mariadb:11.8
         env:
           MARIADB_ROOT_PASSWORD: ci-root
           MARIADB_DATABASE: eis
@@ -62,10 +67,10 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: gradle
-      - name: 테스트 (MariaDB, local 프로파일)
+      - name: 테스트 (MariaDB, ci 프로파일)
         run: ./gradlew test
         env:
-          SPRING_PROFILES_ACTIVE: local
+          SPRING_PROFILES_ACTIVE: ci
 
   # main push에서만 — 배포 후보 bootJar 생성/보관.
   # 이미지 저장소(ECR 등)가 생기면 linux/arm64 이미지 빌드 + push로 승격한다 (system-architecture.md).
@@ -85,6 +90,7 @@ jobs:
         run: ./gradlew bootJar
       - uses: actions/upload-artifact@v4
         with:
-          name: eis-helper-boot-jar
+          # SHA 포함 이름으로 커밋 역추적 (ci-guideline.md §2). plain jar는 build.gradle에서 생성 자체를 껐다.
+          name: eis-helper-boot-${{ github.sha }}
           path: build/libs/*.jar
           retention-days: 14

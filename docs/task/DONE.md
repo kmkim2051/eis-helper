@@ -208,3 +208,13 @@
     - paths-ignore는 조건부 보류 — required check와 조합 시 skip된 check가 pending으로 남아 merge가 막히는 함정을 문서화. CI ~2분이라 비용 문제 없음, 10분+ 시 재검토
 - 검증: 문서 작업 (workflow 수정은 TODO "CI 개선 4건"으로 분리, 미적용)
 - 남은 것: CI 개선 4건 적용, 브랜치 보호 설정(직접)
+
+## 2026-07-10 CI 개선 4건 적용 (ci-guideline.md §2)
+- 변경:
+    - application-ci.yml 신설 — CI 서비스 컨테이너 전용 프로파일, workflow test-mariadb를 local→ci 프로파일로 교체 (로컬 편의 변경과 CI의 결합 해소)
+    - MariaDB 버전 고정 — compose·CI 모두 mariadb:11 → mariadb:11.8 (로컬 컨테이너 실버전 11.8.8 확인 후 동일 마이너로 고정)
+    - build.gradle에서 jar task 비활성화 — plain jar 생성 자체를 꺼서 artifact 오염 방지, artifact 이름에 SHA 포함(eis-helper-boot-<sha>)
+    - workflow에 permissions: contents: read 명시
+    - TODO에 문제 데이터 확충(3→20~30문제) 항목 추가 (roadmap에만 있고 TODO에 누락되어 있었음)
+- 검증: bootJar 산출물이 단일 jar임을 확인, YAML 파싱 검증, SPRING_PROFILES_ACTIVE=ci로 전체 테스트 41개 통과(로컬 13306 컨테이너 = CI 구성과 동일), H2 기본 테스트도 통과
+- 남은 것: push 후 dev→main PR에서 test-mariadb(ci 프로파일) green 확인, 브랜치 보호 설정(직접)

@@ -42,3 +42,8 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// plain jar(-plain.jar)는 쓰지 않으므로 생성 자체를 끈다 — 배포 후보 artifact에 섞이는 것 방지 (ci-guideline.md)
+tasks.named('jar') {
+    enabled = false
+}

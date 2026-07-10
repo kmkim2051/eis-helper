@@ -2,7 +2,8 @@
 # 여기 적힌 자격증명은 로컬 개발 전용이다 — 운영 값은 SSM에서 주입하며 커밋하지 않는다.
 services:
   mariadb:
-    image: mariadb:11
+    # 마이너 버전 고정 — CI·운영과 동일 계열 유지 (ci-guideline.md 원칙 5). 현재 11.8 LTS
+    image: mariadb:11.8
     container_name: eis-mariadb
     # 시드/답안에 한국어 텍스트가 있으므로 utf8mb4 고정
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci

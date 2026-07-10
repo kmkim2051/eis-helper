@@ -1,0 +1,11 @@
+# CI 전용 — GitHub Actions의 MariaDB 서비스 컨테이너(13306 매핑) 대상.
+# 개발자 로컬용 local 프로파일과 분리해, 로컬 편의 변경이 CI를 깨뜨리는 결합을 막는다 (ci-guideline.md 원칙 4).
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:13306/eis
+    username: eis
+    password: local-eis
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
