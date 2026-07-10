@@ -218,3 +218,13 @@
     - TODO에 문제 데이터 확충(3→20~30문제) 항목 추가 (roadmap에만 있고 TODO에 누락되어 있었음)
 - 검증: bootJar 산출물이 단일 jar임을 확인, YAML 파싱 검증, SPRING_PROFILES_ACTIVE=ci로 전체 테스트 41개 통과(로컬 13306 컨테이너 = CI 구성과 동일), H2 기본 테스트도 통과
 - 남은 것: push 후 dev→main PR에서 test-mariadb(ci 프로파일) green 확인, 브랜치 보호 설정(직접)
+
+## 2026-07-10 배포 가이드라인 작성
+- 변경: docs/product/deploy-guideline.md 신규 — CI→배포 연결 흐름, 배포 전/후 체크리스트, 수동 배포 절차(1단계), CD 전환 계획, 롤백 기준
+- 결정:
+    - 배포물은 main CI가 검증한 산출물 원칙 (front dist는 artifact 그대로 배치, backend 이미지는 초기 EC2 빌드 허용 후 registry 도입 시 digest 배포로 전환). bootJar는 JVM이라 아키텍처 중립, ARM64 제약은 Docker 이미지에만 해당함을 명시
+    - 프로젝트 고유 주의사항 2건 문서화: (1) prd ddl-auto=validate라 스키마 변경 배포는 DDL 선적용 필수, 기동 실패가 의도된 신호 (2) 시딩 가드(count==0) 때문에 신규 문제가 배포로 반영 안 됨 — 문제 확충 착수 전 증분 반영 방식 결정 필요를 TODO 연계
+    - DB는 롤백하지 않고 전방 수정(fix-forward) 원칙, 코드 롤백은 직전 태그 재배포
+    - 롤백 판단 기준 명시: 스모크 3종 실패 또는 기동 실패 5분 초과
+- 검증: 문서 작업
+- 남은 것: 배포 마일스톤 3(Dockerize) 진행 시 이 문서의 §3 절차가 실제로 동작하는지 확인
