@@ -1,0 +1,12 @@
+# docker compose 로컬 검증용 — compose 네트워크 내부의 mariadb 서비스에 접속.
+# prd(validate·env 주입)와 달리 스키마 자동 생성(update)으로 빈 DB에서도 기동된다.
+# 운영 compose는 이 프로파일이 아니라 SPRING_PROFILES_ACTIVE=prd + .env.runtime을 쓴다.
+spring:
+  datasource:
+    url: jdbc:mariadb://mariadb:3306/eis
+    username: eis
+    password: local-eis
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false

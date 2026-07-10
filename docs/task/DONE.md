@@ -228,3 +228,21 @@
     - 롤백 판단 기준 명시: 스모크 3종 실패 또는 기동 실패 5분 초과
 - 검증: 문서 작업
 - 남은 것: 배포 마일스톤 3(Dockerize) 진행 시 이 문서의 §3 절차가 실제로 동작하는지 확인
+
+## 2026-07-10 브랜치 보호(ruleset) 설정 및 첫 dev→main merge (사용자 직접)
+- 변경: GitHub ruleset — main에 PR 필수 + required check(test, test-mariadb). 첫 dev→main PR merge로 main 동기화
+- 검증: required check 하에 merge 성공 = test-mariadb(ci 프로파일) 첫 실행 green. main push로 build-candidate artifact 첫 생성
+- 남은 것: 배포 마일스톤 3 (Dockerize)
+
+## 2026-07-10 Dockerize (배포 마일스톤 3)
+- 변경:
+    - Dockerfile 신규 — 멀티스테이지(temurin 21 JDK 빌드 → JRE 실행), 의존성 레이어 분리 캐시, non-root(appuser) 실행. eclipse-temurin은 linux/arm64 지원(t4g 대응), 로컬(ARM Mac) 빌드 = 운영과 동일 아키텍처
+    - docker-compose.yml에 app 서비스 추가 — SPRING_PROFILES_ACTIVE 기본 docker(env로 prd 오버라이드), DB_* 패스스루, 127.0.0.1:${APP_PORT:-18080} localhost bind, depends_on: mariadb healthy, restart: unless-stopped
+    - application-docker.yml 신규 — compose 로컬 검증용 프로파일(사용자 결정). compose 네트워크의 mariadb:3306 접속, ddl-auto=update로 빈 DB에서도 기동. 운영은 prd + .env.runtime
+    - .dockerignore 신규
+- 결정:
+    - compose 파일 하나로 로컬(docker 프로파일)/운영(prd + --env-file .env.runtime) 겸용 — 환경 차이는 env 변수로만 표현
+    - 호스트 포트는 127.0.0.1:18080 bind (이 머신의 8080 점유 + 보안 원칙 '외부 노출은 Nginx만'), 운영에서는 APP_PORT=8080으로 오버라이드
+    - 빈 볼륨 검증은 기존 데이터 볼륨을 건드리지 않도록 별도 compose 프로젝트(-p)의 일회용 볼륨으로 수행 후 삭제
+- 검증: docker compose build/up으로 전체 스택 기동, 스모크 3종(목록 3문제/제출 3점+토큰매칭/404 ProblemDetail) 통과, non-root 확인. 빈 볼륨 신규 기동(~8초, 초기화→스키마 생성→시딩) 검증. 원래 스택 복구 후 기존 데이터(user_answer 2건) 무손실 확인
+- 남은 것: 배포 마일스톤 4 (EC2 + Nginx 구성)

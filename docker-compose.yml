@@ -1,6 +1,26 @@
-# 로컬 개발용 스택. 현재는 MariaDB만 포함하며, Dockerize 단계에서 app 서비스가 추가된다.
-# 여기 적힌 자격증명은 로컬 개발 전용이다 — 운영 값은 SSM에서 주입하며 커밋하지 않는다.
+# 로컬/운영 공용 스택 정의. 여기 적힌 자격증명은 로컬 개발 전용이다 — 운영 값은 SSM → .env.runtime으로 주입한다.
+# - 로컬 전체 스택 검증: docker compose up -d --build  (app은 docker 프로파일 기본값)
+# - 운영(EC2):          docker compose --env-file .env.runtime up -d  (SPRING_PROFILES_ACTIVE=prd, DB_* 주입)
+# - gradle 직접 개발:    mariadb만 띄우고 ./gradlew bootRun (local 프로파일, 호스트 13306)
 services:
+  app:
+    build: .
+    container_name: eis-helper-app
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      # prd 프로파일에서만 사용 (docker 프로파일은 무시)
+      DB_URL: ${DB_URL:-}
+      DB_USERNAME: ${DB_USERNAME:-}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+    ports:
+      # localhost bind — 외부 노출은 Nginx(80/443)만 (system-architecture 보안 원칙).
+      # 호스트 8080은 이 머신에서 다른 프로세스가 점유 중이라 기본 18080
+      - "127.0.0.1:${APP_PORT:-18080}:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    restart: unless-stopped
+
   mariadb:
     # 마이너 버전 고정 — CI·운영과 동일 계열 유지 (ci-guideline.md 원칙 5). 현재 11.8 LTS
     image: mariadb:11.8
