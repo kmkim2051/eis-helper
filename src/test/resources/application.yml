@@ -1,0 +1,7 @@
+# 테스트는 H2 임베디드로 실행한다 (빠르고 CI에서 외부 DB 불필요).
+# MariaDB 호환 검증이 필요하면 compose 기동 후 SPRING_PROFILES_ACTIVE=local ./gradlew test 로 확인한다.
+# 이 파일은 테스트 클래스패스에서 main의 application.yml을 대체하므로
+# spring.profiles.default=local이 적용되지 않아 H2 자동 구성이 동작한다.
+spring:
+  application:
+    name: eis-helper

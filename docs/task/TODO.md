@@ -13,7 +13,6 @@ Front(eis-helper-front) 연동 — CORS는 사용하지 않는 구조로 결정 
 front 핵심 화면(목록/풀이/결과, front repo TODO)이 갖춰지는 시점에 맞춰 착수:
 
 - [ ] CI 구축 — GitHub Actions로 push/PR 시 ./gradlew test + build. 배포 이전의 안전망 (front repo도 별도 CI: lint + build)
-- [ ] H2 → MariaDB 전환 — 로컬 docker compose로 MariaDB 기동, application-local/prod 프로파일 분리, 시딩 가드(count==0) 동작 확인, ddl-auto 정책 결정(prod는 validate 권장). 완료 조건: MariaDB로 전체 테스트 및 실기동 통과
 - [ ] Dockerize — 백엔드 Dockerfile(bootJar 기반) + docker-compose.yml(app + mariadb), MariaDB data volume 명시적 분리, restart policy 설정, 시크릿은 --env-file로 주입(커밋 금지). t4g(ARM64) 대상이므로 linux/arm64 이미지 호환 확인(초기: EC2에서 직접 build, CI/CD 확장 시 buildx/multi-arch 명시). 완료 조건: docker compose up만으로 로컬 전체 스택 기동
 - [ ] EC2 + Nginx 구성 — t4g.small 1대 + Elastic IP, 보안그룹(80/443만 공개, 22는 내 IP 제한 또는 SSM Session Manager, 8080/3306 비공개). Nginx가 정적 프런트 서빙 + /api → localhost:8080 프록시, location 우선순위(/api 프록시 ↔ SPA fallback try_files) 검증, /actuator/health 확인, front 빌드 산출물 배치 절차 문서화. 완료 조건: 퍼블릭 IP로 문제 풀이 루프 동작
 - [ ] DB 백업 구성 (공개 전 필수) — daily mysqldump → S3 업로드(최소 7일 보관) cron, EBS snapshot 주기 설정, 복구 절차 문서화 + 덤프 복원 리허설 1회. 완료 조건: 리허설로 복원 확인

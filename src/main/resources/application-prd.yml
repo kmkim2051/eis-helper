@@ -1,0 +1,11 @@
+# 운영 — 접속 정보는 환경변수로만 주입 (SSM Parameter Store → .env.runtime → compose --env-file)
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    # 운영 스키마는 수동 관리 — 기동 시 엔티티와 불일치하면 실패시켜 드리프트를 조기 발견
+    hibernate:
+      ddl-auto: validate
+    show-sql: false

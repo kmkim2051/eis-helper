@@ -170,3 +170,19 @@
     - AnswerService에서 ProblemRepository를 다시 조회하지 않고 ScoringOutcome에 Problem을 실어 전달 — 채점 트랜잭션 안에서 이미 로드된 엔티티 재사용
 - 검증: ./gradlew test 전체 통과(41개) + bootRun(18080) 실기동 curl — XSS 문제(2번)에 조사 붙은 답안("출력값을 인코딩하고")을 제출해 토큰 매칭 인정 + recommendedAnswer 포함 응답 확인
 - 남은 것: Phase 1 완료. 다음은 roadmap Phase 2 (LLM Client, LlmCriterionEvaluator, confidence/fallback 처리) — TODO 목록 재구성 필요
+
+## 2026-07-10 H2 → MariaDB 전환 (배포 마일스톤 2)
+- 변경:
+    - docker-compose.yml 신규 — mariadb:11(utf8mb4 서버 고정, 한국어 시드 대응), named volume 분리, healthcheck, restart policy. Dockerize 단계에서 app 서비스 추가 예정
+    - 설정을 application.yml 3분할로 구성 — 공통(spring.profiles.default=local) / application-local.yml(MariaDB 13306, ddl-auto=update) / application-prd.yml(env 주입 DB_URL 등, ddl-auto=validate, show-sql off). 운영 프로파일명은 'prod' 대신 'prd' 사용, 포맷은 properties 대신 yml
+    - src/test/resources/application.yml 신규 — 테스트는 H2 임베디드 유지(테스트 클래스패스가 main 설정을 대체해 profiles.default 미적용)
+    - ScoringCriterion.aliases에 @OrderBy("id ASC"), ScoringRubric.criteria에 @OrderBy("orderNo ASC") 추가
+- 결정:
+    - 호스트 포트는 13306 — 로컬 3306을 별도 네이티브 mariadbd(PID 4586)가 점유 중
+    - 테스트 기본은 H2 유지 — CI에서 외부 DB 불필요, 빠름. MariaDB 호환 검증은 compose 기동 후 SPRING_PROFILES_ACTIVE=local ./gradlew test로 수행
+    - compose의 자격증명은 로컬 전용으로 커밋 허용, 운영 값은 SSM → env 주입 (system-architecture.md 원칙)
+    - h2-console 설정 제거 — MariaDB는 mysql 클라이언트로 조회
+- 발견/수정 버그: MariaDB 테스트에서 matchedKeywords 중복 제거가 "prepared statement"를 남기고 "PreparedStatement"를 제거 — @OneToMany alias 컬렉션 순서가 DB 의존(H2 삽입 순, MariaDB 임의)인데 중복 제거가 "첫 표기 유지" 규칙이라 순서에 의존했음. @OrderBy로 등록 순서 고정해 해결 (H2만으로는 못 잡았을 이식성 버그)
+- 로컬 환경 노트: Docker Desktop 데몬이 구버전(API 1.43)이라 신형 CLI(29.x)와 버전 협상 실패 — DOCKER_API_VERSION=1.43 환경변수 필요. Docker Desktop 업데이트 권장
+- 검증: H2 테스트 41개 + MariaDB(local 프로파일) 테스트 41개 통과. 실기동(18080)으로 시딩 3문제 확인 → 답안 제출 → 재시작 → user_answer 보존 + 중복 시딩 없음 확인 (H2 시절 재시작 소실 문제 해소)
+- 남은 것: 배포 마일스톤 계속 — CI 구축(1번), Dockerize(3번)

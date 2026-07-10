@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +54,10 @@ public class ScoringCriterion {
   @Column(nullable = false)
   private int orderNo;
 
+  // DB에 따라 컬렉션 반환 순서가 달라지므로(H2는 삽입 순, MariaDB는 임의) 등록 순서로 고정.
+  // 매칭 키워드 중복 제거가 "첫 표기 유지" 규칙이라 순서가 결과에 영향을 준다.
   @Builder.Default
+  @OrderBy("id ASC")
   @OneToMany(mappedBy = "scoringCriterion", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<CriterionAlias> aliases = new ArrayList<>();
 }

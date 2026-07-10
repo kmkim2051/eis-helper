@@ -1,0 +1,28 @@
+# 로컬 개발용 스택. 현재는 MariaDB만 포함하며, Dockerize 단계에서 app 서비스가 추가된다.
+# 여기 적힌 자격증명은 로컬 개발 전용이다 — 운영 값은 SSM에서 주입하며 커밋하지 않는다.
+services:
+  mariadb:
+    image: mariadb:11
+    container_name: eis-mariadb
+    # 시드/답안에 한국어 텍스트가 있으므로 utf8mb4 고정
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MARIADB_ROOT_PASSWORD: local-root
+      MARIADB_DATABASE: eis
+      MARIADB_USER: eis
+      MARIADB_PASSWORD: local-eis
+    ports:
+      # 호스트 3306은 별도 네이티브 mariadbd가 점유 중이라 13306 사용
+      - "13306:3306"
+    volumes:
+      - eis-mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  # data volume 명시적 분리 (system-architecture.md 백업 원칙)
+  eis-mariadb-data:

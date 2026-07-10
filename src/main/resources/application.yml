@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: eis-helper
+  # 프로파일을 지정하지 않으면 local(MariaDB)로 동작한다.
+  # 테스트는 src/test/resources/application.yml(H2 임베디드)이 이 파일을 대체한다.
+  profiles:
+    default: local

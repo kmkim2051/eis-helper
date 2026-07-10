@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
@@ -43,7 +44,9 @@ public class ScoringRubric {
   @Column(length = 255)
   private String description;
 
+  // DB에 따라 컬렉션 반환 순서가 달라지므로 채점 기준 순서(orderNo)로 고정
   @Builder.Default
+  @OrderBy("orderNo ASC")
   @OneToMany(mappedBy = "scoringRubric", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<ScoringCriterion> criteria = new ArrayList<>();
 }
