@@ -2,7 +2,7 @@
 
 > 이 문서는 프로젝트의 존재 이유(왜 만드는가)를 정의한다.
 > MVP 범위와 로드맵은 [mvp-scope-and-roadmap.md](mvp-scope-and-roadmap.md),
-> 설계는 [system-design.md](system-design.md),
+> 설계는 [service-design.md](service-design.md),
 > 개발 원칙은 [engineering-guidelines.md](engineering-guidelines.md) 참고.
 
 ## 1. 프로젝트 개요

@@ -209,6 +209,6 @@ erDiagram
 
 ## 참고
 
-- 필드 정의 근거: [../product/system-design.md](../product/system-design.md) 1절 핵심 도메인 모델
+- 필드 정의 근거: [../product/service-design.md](../product/service-design.md) 1절 핵심 도메인 모델
 - 범위 근거: [../product/mvp-scope-and-roadmap.md](../product/mvp-scope-and-roadmap.md) Phase 1, Phase 4
 - 구현: `skyline.eis.eishelper.problem.entity`, `skyline.eis.eishelper.scoring.entity`

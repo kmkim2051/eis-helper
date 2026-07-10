@@ -1,7 +1,7 @@
 # 개발 원칙과 주의사항
 
 > 이 문서는 개발 전 과정에서 지켜야 할 원칙, 기술 스택, 포트폴리오 어필 포인트를 정의한다.
-> 설계 상세는 [system-design.md](system-design.md) 참고.
+> 설계 상세는 [service-design.md](service-design.md) 참고.
 
 ## 1. 주의사항
 

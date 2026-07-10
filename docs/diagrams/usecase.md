@@ -88,5 +88,5 @@ flowchart TD
 
 ## 참고
 
-- 채점 원칙(AI는 판단만, 점수 계산은 서버)은 [../product/system-design.md](../product/system-design.md) 참고.
+- 채점 원칙(AI는 판단만, 점수 계산은 서버)은 [../product/service-design.md](../product/service-design.md) 참고.
 - 풀이 이력 조회, 취약점 분석 유스케이스는 Phase 4에서 추가 예정 ([../product/mvp-scope-and-roadmap.md](../product/mvp-scope-and-roadmap.md)).

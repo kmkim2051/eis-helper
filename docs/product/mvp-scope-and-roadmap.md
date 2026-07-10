@@ -1,7 +1,7 @@
 # MVP 범위와 로드맵
 
 > 이 문서는 무엇을 언제 만드는지(범위, 우선순위, 데이터 전략)를 정의한다.
-> 제품의 존재 이유는 [product-overview.md](product-overview.md), 설계는 [system-design.md](system-design.md) 참고.
+> 제품의 존재 이유는 [product-overview.md](product-overview.md), 설계는 [service-design.md](service-design.md) 참고.
 
 ## 1. 초기 MVP 범위
 
