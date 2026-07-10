@@ -186,3 +186,15 @@
 - 로컬 환경 노트: Docker Desktop 데몬이 구버전(API 1.43)이라 신형 CLI(29.x)와 버전 협상 실패 — DOCKER_API_VERSION=1.43 환경변수 필요. Docker Desktop 업데이트 권장
 - 검증: H2 테스트 41개 + MariaDB(local 프로파일) 테스트 41개 통과. 실기동(18080)으로 시딩 3문제 확인 → 답안 제출 → 재시작 → user_answer 보존 + 중복 시딩 없음 확인 (H2 시절 재시작 소실 문제 해소)
 - 남은 것: 배포 마일스톤 계속 — CI 구축(1번), Dockerize(3번)
+
+## 2026-07-10 CI 구축 (배포 마일스톤 1)
+- 변경: .github/workflows/ci.yml 신규 (front repo에도 별도 작성), docs/product/ci-design.md 설계서 작성 (front repo에도 각각)
+- 결정:
+    - 브랜치 전략: dev → main 2-브랜치 + v* 태그. prd 브랜치는 만들지 않음 — 환경이 1개(운영 EC2 예정)이고 배포 자동화 전이라 브랜치 동기화 비용만 발생. "배포 = 명시적 행위"는 추후 CD에서 v* 태그 + GitHub Environment 수동 승인으로 달성
+    - 검증 강도 차등: feature→dev PR/dev push는 test(H2)만(빠른 피드백), dev→main PR과 main push는 test-mariadb(서비스 컨테이너, 13306 매핑으로 application-local.yml 무수정 재사용) 추가 — "배포 가능" 판정이 main 진입 지점에서 일어나도록
+    - main push 시 build-candidate job이 bootJar를 artifact로 보관(14일) — ECR 등 이미지 저장소가 생기면 linux/arm64 이미지 push로 승격
+    - CD(v* 태그 → 운영 배포)는 EC2 구성 후 별도 workflow로 — 지금은 설계만 주석으로 남김
+    - gradle wrapper 검증(gradle/actions/wrapper-validation) 포함 — wrapper.jar 변조 방지
+    - CI용 MariaDB는 utf8mb4 command 플래그 없이 기본값 사용 — MariaDB 10.6+부터 기본 charset이 utf8mb4라 테스트에 영향 없음
+- 검증: YAML 파싱 검증만 수행(js-yaml) — 실제 green 확인은 push 후 가능 (TODO에 후속 항목)
+- 남은 것: workflow push 후 green 확인, main 브랜치 보호 설정(직접), Dockerize(마일스톤 3)
