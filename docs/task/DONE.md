@@ -198,3 +198,13 @@
     - CI용 MariaDB는 utf8mb4 command 플래그 없이 기본값 사용 — MariaDB 10.6+부터 기본 charset이 utf8mb4라 테스트에 영향 없음
 - 검증: YAML 파싱 검증만 수행(js-yaml) — 실제 green 확인은 push 후 가능 (TODO에 후속 항목)
 - 남은 것: workflow push 후 green 확인, main 브랜치 보호 설정(직접), Dockerize(마일스톤 3)
+
+## 2026-07-10 CI 외부 피드백 검토 및 ci-guideline.md 작성
+- 변경: docs/product/ci-guideline.md 신규 — CI/CD 개선 원칙(빌드 1회·동일 산출물 배포, 추적성, 최소 권한, CI 환경 명시, 버전 고정) + 적용 시점 구분
+- 결정:
+    - 즉시 적용 5건 수용: 브랜치 보호(기존 TODO), ci 프로파일 분리, MariaDB 버전 고정, *-plain.jar 제외(+artifact SHA 이름), permissions: contents: read → TODO 등록
+    - Docker/CD 시점 적용 4건 수용: 테스트한 동일 이미지 배포, SHA/digest 추적, main concurrency 취소 분리(배포 후보 생성 중단 방지), AWS 인증 OIDC
+    - test/integrationTest task 분리는 보류 — Redis/Kafka/Flyway 부재 + "같은 스위트를 두 엔진에 돌리는 교차 검증"이 의도된 설계(@OrderBy 버그를 잡은 방식). 테스트 수백 개 규모 또는 외부 인프라 의존 테스트 발생 시 재검토
+    - paths-ignore는 조건부 보류 — required check와 조합 시 skip된 check가 pending으로 남아 merge가 막히는 함정을 문서화. CI ~2분이라 비용 문제 없음, 10분+ 시 재검토
+- 검증: 문서 작업 (workflow 수정은 TODO "CI 개선 4건"으로 분리, 미적용)
+- 남은 것: CI 개선 4건 적용, 브랜치 보호 설정(직접)
