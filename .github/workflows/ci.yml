@@ -1,0 +1,96 @@
+# CI 시나리오 (docs/task/DONE.md 2026-07-10 CI 항목 참고)
+# - feature → dev PR / dev push: test(H2)만 — 빠른 피드백
+# - dev → main PR: test + test-mariadb — "배포 가능" 판정 지점
+# - main push: 전체 검증 후 배포 후보(bootJar) 생성
+# - 운영 배포(CD)는 EC2 구성 후 별도 workflow (v* 태그 + 수동 승인 게이트)
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+# 최소 권한 원칙 (ci-guideline.md §2-5)
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 모든 트리거에서 실행 — H2 임베디드라 외부 의존 없음
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gradle/actions/wrapper-validation@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: 테스트 (H2)
+        run: ./gradlew test
+
+  # dev → main PR과 main push에서만 — MariaDB(ci 프로파일)로 이식성 검증
+  # (H2만으로는 못 잡는 버그가 실제로 있었음: 컬렉션 순서 @OrderBy 건)
+  test-mariadb:
+    if: >-
+      (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      mariadb:
+        # docker-compose.yml과 동일 마이너 버전 고정 (ci-guideline.md)
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: ci-root
+          MARIADB_DATABASE: eis
+          MARIADB_USER: eis
+          MARIADB_PASSWORD: local-eis
+        ports:
+          # application-local.yml의 13306을 그대로 사용하기 위한 매핑
+          - 13306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: 테스트 (MariaDB, ci 프로파일)
+        run: ./gradlew test
+        env:
+          SPRING_PROFILES_ACTIVE: ci
+
+  # main push에서만 — 배포 후보 bootJar 생성/보관.
+  # 이미지 저장소(ECR 등)가 생기면 linux/arm64 이미지 빌드 + push로 승격한다 (system-architecture.md).
+  build-candidate:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, test-mariadb]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: bootJar 빌드
+        run: ./gradlew bootJar
+      - uses: actions/upload-artifact@v4
+        with:
+          # SHA 포함 이름으로 커밋 역추적 (ci-guideline.md §2). plain jar는 build.gradle에서 생성 자체를 껐다.
+          name: eis-helper-boot-${{ github.sha }}
+          path: build/libs/*.jar
+          retention-days: 14
